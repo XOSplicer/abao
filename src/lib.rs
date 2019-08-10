@@ -8,6 +8,9 @@
 //! Append only array backed data structures
 //!
 
+
+// TODO: move to no_std
+
 mod utils;
 mod errors;
 mod vec;

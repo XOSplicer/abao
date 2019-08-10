@@ -7,6 +7,7 @@ use crate::utils::{cell_as_slice_of_cells, cell_from_mut};
 
 /// An array backed apend only vector.
 ///
+/// TODO: explain concurrency restrains and promises
 ///
 /// # Examples
 ///
@@ -195,6 +196,8 @@ impl<'a, T> AbaoVec<'a, T> {
         let idx = self.next_idx.fetch_add(1, Ordering::SeqCst); // can this be weaker?
 
         if idx >= self.buf.len() {
+            // prevent usize overflow
+            self.next_idx.store(self.buf.len(), Ordering::Relaxed); // should this be stronger?
             return Err(OomError);
         }
 
@@ -264,6 +267,7 @@ impl<'a, T> AbaoVec<'a, T> {
         // NOTE(index):
         // self.len() should never be out of bound,
         // so checking the index is actually not necessary
+        // TODO: remove checked indexing
         unsafe { &*(&self.buf[0..self.len()] as *const [Cell<MaybeUninit<T>>] as *const [T]) }
     }
 }
@@ -281,4 +285,64 @@ impl<'a, T> Drop for AbaoVec<'a, T> {
     }
 }
 
-// TODO: add drop test
+#[cfg(test)]
+mod tests {
+    use crate::AbaoVec;
+    use crate::OomError;
+    use std::mem::MaybeUninit;
+
+    // regular behavior to be run by miri
+    #[test]
+    fn regular() {
+        let mut buf: [MaybeUninit<u8>; 128] = unsafe {
+            MaybeUninit::uninit().assume_init()
+        };
+        let v = AbaoVec::new(&mut buf[..]);
+        assert_eq!(v.len(), 0);
+        assert_eq!(v.as_slice(), &[]);
+        v.push(0).unwrap();
+        assert_eq!(v.len(), 1);
+        v.push(1).unwrap();
+        assert_eq!(v.len(), 2);
+        v.push(2).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(v.get(0), Some(&0));
+        assert_eq!(v.get(1), Some(&1));
+        assert_eq!(v.get(2), Some(&2));
+        assert_eq!(v.as_slice(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn drop() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn zero_length() {
+        let v = AbaoVec::new(&mut []);
+        assert_eq!(v.len(), 0);
+        assert_eq!(v.as_slice(), &[]);
+        assert_eq!(v.push(0_u8), Err(OomError));
+        assert_eq!(v.len(), 0);
+        assert_eq!(v.as_slice(), &[]);
+    }
+
+    #[test]
+    fn single_length() {
+        let mut buf: [MaybeUninit<u8>; 1] = unsafe {
+            MaybeUninit::uninit().assume_init()
+        };
+        let v = AbaoVec::new(&mut buf[..]);
+        assert_eq!(v.len(), 0);
+        assert_eq!(v.as_slice(), &[]);
+        v.push(0).unwrap();
+        assert_eq!(v.len(), 1);
+        assert_eq!(v.as_slice(), &[0]);
+        assert_eq!(v.push(1), Err(OomError));
+        assert_eq!(v.len(), 1);
+        assert_eq!(v.as_slice(), &[0]);
+    }
+
+    // usize overflow is not tested since it takes too long
+
+}
