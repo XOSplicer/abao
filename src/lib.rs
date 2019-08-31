@@ -8,11 +8,10 @@
 //! Append only array backed data structures
 //!
 
-
 // TODO: move to no_std
 
-mod utils;
 mod errors;
+mod utils;
 mod vec;
 
 pub use errors::OomError;

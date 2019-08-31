@@ -1,7 +1,7 @@
 use std::cell::Cell;
+use std::fmt;
 use std::mem::MaybeUninit;
 use std::sync::atomic::{self, AtomicUsize, Ordering};
-use std::fmt;
 
 use crate::errors::OomError;
 use crate::utils::{cell_as_slice_of_cells, cell_from_mut};
@@ -109,7 +109,6 @@ impl<'a, T> AbaoVec<'a, T> {
         );
         len
     }
-
 
     /// Get the value at index `idx`.
     ///
@@ -289,7 +288,10 @@ impl<'a, T> Drop for AbaoVec<'a, T> {
 unsafe impl<'a, T> Send for AbaoVec<'a, T> where T: Send {} // TODO: check safety
 unsafe impl<'a, T> Sync for AbaoVec<'a, T> where T: Sync {} // TODO: check safety
 
-impl<'a, T> fmt::Debug for AbaoVec<'a, T> where T: fmt::Debug {
+impl<'a, T> fmt::Debug for AbaoVec<'a, T>
+where
+    T: fmt::Debug,
+{
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_list().entries(self.as_slice().iter()).finish()
     }
@@ -304,9 +306,7 @@ mod tests {
     // regular behavior to be run by miri
     #[test]
     fn regular() {
-        let mut buf: [MaybeUninit<u8>; 128] = unsafe {
-            MaybeUninit::uninit().assume_init()
-        };
+        let mut buf: [MaybeUninit<u8>; 128] = unsafe { MaybeUninit::uninit().assume_init() };
         let v = AbaoVec::new(&mut buf[..]);
         assert_eq!(v.len(), 0);
         assert_eq!(v.as_slice(), &[]);
@@ -339,9 +339,7 @@ mod tests {
                 COUNT.fetch_sub(1, Ordering::Relaxed);
             }
         }
-        let mut buf: [MaybeUninit<X>; 128] = unsafe {
-            MaybeUninit::uninit().assume_init()
-        };
+        let mut buf: [MaybeUninit<X>; 128] = unsafe { MaybeUninit::uninit().assume_init() };
         let v = AbaoVec::new(&mut buf[..]);
         assert_eq!(v.len(), 0);
         assert_eq!(COUNT.load(Ordering::Relaxed), 0);
@@ -370,9 +368,7 @@ mod tests {
 
     #[test]
     fn single_length() {
-        let mut buf: [MaybeUninit<u8>; 1] = unsafe {
-            MaybeUninit::uninit().assume_init()
-        };
+        let mut buf: [MaybeUninit<u8>; 1] = unsafe { MaybeUninit::uninit().assume_init() };
         let v = AbaoVec::new(&mut buf[..]);
         assert_eq!(v.len(), 0);
         assert_eq!(v.as_slice(), &[]);
