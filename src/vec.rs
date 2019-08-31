@@ -95,7 +95,6 @@ impl<'a, T> AbaoVec<'a, T> {
     /// assert_eq!(v.len(), 2);
     /// v.push(3).unwrap();
     /// assert_eq!(v.len(), 3);
-    ///
     /// ```
     pub fn len(&self) -> usize {
         let len = self.confirmed_len.load(Ordering::Relaxed);
@@ -108,6 +107,31 @@ impl<'a, T> AbaoVec<'a, T> {
             "Invarian violation: Vector has more confirmed writes than total writes"
         );
         len
+    }
+
+    /// Check if the vector is currently empty.
+    ///
+    /// Actually the vector may already contain some elements
+    /// which have not finished to be inserted.
+    /// However it is not yet possible to access them.
+    ///
+    /// # Exmaples
+    ///
+    /// ```
+    /// use abao::AbaoVec;
+    /// use std::mem::MaybeUninit;
+    ///
+    /// let mut buf: [MaybeUninit<u8>; 128] = unsafe {
+    ///     MaybeUninit::uninit().assume_init()
+    /// };
+    /// let v = AbaoVec::new(&mut buf[..]);
+    ///
+    /// assert_eq!(v.is_empty(), true);
+    /// v.push(1).unwrap();
+    /// assert_eq!(v.is_empty(), false);
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Get the value at index `idx`.
@@ -148,7 +172,7 @@ impl<'a, T> AbaoVec<'a, T> {
             // since all elements up to at least the current len
             // have been initialized
             // and idx is not out of bounds, this is safe to do
-            return Some(self.get_unchecked(idx));
+            Some(self.get_unchecked(idx))
         }
     }
 
