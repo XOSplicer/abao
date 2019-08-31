@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::mem::MaybeUninit;
 use std::sync::atomic::{self, AtomicUsize, Ordering};
+use std::fmt;
 
 use crate::errors::OomError;
 use crate::utils::{cell_as_slice_of_cells, cell_from_mut};
@@ -282,6 +283,15 @@ impl<'a, T> Drop for AbaoVec<'a, T> {
                 std::ptr::drop_in_place(ptr);
             }
         }
+    }
+}
+
+unsafe impl<'a, T> Send for AbaoVec<'a, T> where T: Send {} // TODO: check safety
+unsafe impl<'a, T> Sync for AbaoVec<'a, T> where T: Sync {} // TODO: check safety
+
+impl<'a, T> fmt::Debug for AbaoVec<'a, T> where T: fmt::Debug {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_list().entries(self.as_slice().iter()).finish()
     }
 }
 

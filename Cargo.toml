@@ -7,4 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
+
+[dependencies]
+# TODO: clean up
+owning_ref = "0.4.0"
+lazy_static = "1.4.0"
 scoped_threadpool = "0.1.9"
