@@ -46,23 +46,3 @@ fn scoped_insert() {
     }
 
 }
-
-// #[test]
-// fn destructures() {
-//         static COUNT: AtomicUsize = AtomicUsize::new(0);
-
-//         struct X;
-
-//         impl X {
-//             fn new() -> X {
-//                 COUNT.fetch_add(1, Ordering::Relaxed);
-//                 X
-//             }
-//         }
-
-//         impl Drop for X {
-//             fn drop(&mut self) {
-//                 COUNT.fetch_sub(1, Ordering::Relaxed);
-//             }
-//         }
-// }

@@ -323,8 +323,39 @@ mod tests {
     }
 
     #[test]
-    fn drop() {
-        unimplemented!();
+    fn dropable() {
+        use std::sync::atomic::AtomicUsize;
+        use std::sync::atomic::Ordering;
+        static COUNT: AtomicUsize = AtomicUsize::new(0);
+        struct X;
+        impl X {
+            fn new() -> X {
+                COUNT.fetch_add(1, Ordering::Relaxed);
+                X
+            }
+        }
+        impl Drop for X {
+            fn drop(&mut self) {
+                COUNT.fetch_sub(1, Ordering::Relaxed);
+            }
+        }
+        let mut buf: [MaybeUninit<X>; 128] = unsafe {
+            MaybeUninit::uninit().assume_init()
+        };
+        let v = AbaoVec::new(&mut buf[..]);
+        assert_eq!(v.len(), 0);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 0);
+        v.push(X::new()).unwrap();
+        assert_eq!(v.len(), 1);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 1);
+        v.push(X::new()).unwrap();
+        assert_eq!(v.len(), 2);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 2);
+        v.push(X::new()).unwrap();
+        assert_eq!(v.len(), 3);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 3);
+        drop(v);
+        assert_eq!(COUNT.load(Ordering::Relaxed), 0);
     }
 
     #[test]
